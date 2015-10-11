@@ -5,3 +5,13 @@ cabal-dev
 *.chi
 *.chs.h
 *.pyc
+*.dyn_o
+*.dyn_hi
+.hpc
+.hsenv
+.cabal-sandbox/
+cabal.sandbox.config
+*.prof
+*.aux
+*.hp
+.stack-work/
