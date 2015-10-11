@@ -5,6 +5,16 @@ import Control.Monad (forM_)
 import Data.Int (Int16 (..))
 import Data.Binary (encode)
 import qualified Data.ByteString.Lazy as BS (ByteString, concat, putStr)
+--------------------------------------------------------------------------------
+import           Control.Concurrent  (forkIO)
+import           Control.Monad       (forever, unless)
+import           Control.Monad.Trans (liftIO)
+import           Network.Socket      (withSocketsDo)
+import           Data.Text           (Text)
+import qualified Data.Text           as T
+import qualified Data.Text.IO        as T
+import qualified Network.WebSockets  as WS
+
 
 type Amplitude = Double
 type Time = Double
@@ -86,6 +96,29 @@ render startT endT sampleRate s =
         toInt16 x = (truncate (minSig + ((x + 1.0) / 2.0 * (maxSig - minSig))))
         asInt16 = (toInt16 <$> clipped) :: Time -> Int16
         totalSamples = (endT - startT) / sampleTime
+
+--------------------------------------------------------------------------------
+leapData :: WS.ClientApp ()
+leapData conn = do
+    putStrLn "Connected!"
+
+    -- Fork a thread that writes WS data to stdout
+    _ <- forkIO $ forever $ do
+        msg <- WS.receiveData conn
+        liftIO $ T.putStrLn msg
+
+    -- Read from stdin and write to WS
+    let loop = do
+            line <- T.getLine
+            unless (T.null line) $ WS.sendTextData conn line >> loop
+
+    loop
+    WS.sendClose conn ("Bye!" :: Text)
+
+
+--------------------------------------------------------------------------------
+-- main :: IO ()
+-- main = withSocketsDo $ WS.runClient "echo.websocket.org" 80 "/" app
 
 main :: IO ()
 main = do
